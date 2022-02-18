@@ -14,7 +14,7 @@ MPI_Datatype newType();
 
 int main(int argc, char* argv[]) {
 	int my_rank, num_procs;
-	printf("SKSKS");
+	// printf("SKSKS");
 	clock_t begin_parallel = clock(); // Get time for execution time calculation
 
 	MPI_Init(&argc, &argv);
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 	MPI_Datatype MPI_RESULT = newType();
 	MPI_Status status;
-	printf("SKSKS1212");
+	// printf("SKSKS1212");
 	// Get values from input file
 	double* weights = (double*)malloc(NUM_WEIGHTS * sizeof(double));
 	if (weights == NULL) {

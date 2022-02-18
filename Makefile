@@ -9,7 +9,7 @@ clean:
 	rm -f *.o SequenceAlignment
 
 run:
-	mpiexec --oversubscribe -np 6 SequenceAlignment
+	mpiexec -np 6 ./SequenceAlignment
 
 runOn2:
-	mpiexec -np 3 --machinefile hosts.txt --map-by node SequenceAlignment
+	mpiexec -np 15 --machinefile hosts.txt --map-by node ./SequenceAlignment

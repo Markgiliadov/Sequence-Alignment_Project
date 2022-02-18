@@ -11,7 +11,7 @@ int calcScoreWithCuda(double* similarities, double* scores, int num_rows, int nu
 	double* dev_scores;
 
 	// Allocate memory on GPU 
-	printf("\nbefore: %lu", num_rows * num_cols * sizeof(double));
+	// printf("\nbefore: %lu", num_rows * num_cols * sizeof(double));
 	err = cudaMalloc((void**)&dev_similarities, num_rows * num_cols * sizeof(double));
 	checkErrors(err, "Failed to allocate similarities to device memory - %s\n");
 
