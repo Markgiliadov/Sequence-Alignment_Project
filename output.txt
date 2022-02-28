@@ -1,4 +1,4 @@
-Offset n = 363	MS(85)
-Offset n = 126	MS(41)
-Offset n = 855	MS(51)
-Offset n = 975	MS(245)
+n = 363	 k = 85 
+n = 126	 k = 41 
+n = 855	 k = 51 
+n = 975	 k = 245 

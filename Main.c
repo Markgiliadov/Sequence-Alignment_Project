@@ -123,7 +123,7 @@ void writeToFile(Result* results, int num_seqs)
 	}
 
 	for (int seq = 0; seq < num_seqs; seq++) {
-		fprintf(outputFile, "Offset n = %d\tMS(%d)\n", results[seq].offset, results[seq].mutant);
+		fprintf(outputFile, "n = %d\t k = %d \n", results[seq].offset, results[seq].mutant);
 	}
 	fclose(outputFile);
 }
