@@ -1,61 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "Main.h"
 #include "/usr/include/x86_64-linux-gnu/mpich/mpi.h"
 #include <time.h>
-#include "Functions.h"
-#include "Sequential.h"
+#include "myFunctions.h"
+#include "mySeqSol.h"
 
 #define MASTER 0
 #define NUM_WEIGHTS 4
 
-char** readFile(char* NS1, double* weights, int* num_seqs);
-void writeToFile(Result* results, int num_seqs);
-MPI_Datatype newType();
-
 int main(int argc, char* argv[]) {
-	int my_rank, num_procs;
-	// printf("SKSKS");
-	clock_t begin_parallel = clock(); // Get time for execution time calculation
+	int my_rank, number_of_processes;
+	clock_t begin_parallel = clock(); // Get time for comparison
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+	MPI_Comm_size(MPI_COMM_WORLD, &number_of_processes);
 	MPI_Datatype MPI_RESULT = newType();
 	MPI_Status status;
-	// printf("SKSKS1212");
 	// Get values from input file
 	double* weights = (double*)malloc(NUM_WEIGHTS * sizeof(double));
 	if (weights == NULL) {
-		error_handler("Failed to allocate memory for weights\n");
+		error_handler("Failed to allocate memory -> weights");
 	}
 	char* NS1 = (char*)malloc(3000 * sizeof(char));
 	if (NS1 == NULL) {
-		error_handler("Failed to allocate memory for NS1\n");
+		error_handler("Failed to allocate memory -> NS1");
 	}
-	int num_seqs = 0;
-	char** NS2 = readFile(NS1, weights, &num_seqs);
-	printf("\ndid read\n%f %f %f %f :DONE?", weights[0],weights[1],weights[2],weights[3]);
+	int number_of_sequences = 0;
+	char** NS2 = readFile(NS1, weights, &number_of_sequences);
 	// Initialize parallel result array for all sequences results
-	Result* parallel_results = (Result*)malloc(num_seqs * sizeof(Result));
+	FinalResult* parallel_results = (FinalResult*)malloc(number_of_sequences * sizeof(FinalResult));
 	if (parallel_results == NULL) {
-		error_handler("Failed to allocate memory for parallel results\n");
+		error_handler("Failed to allocate memory -> parallel results");
 	}
-	// For each SN2
-	for (int seq = 0; seq < num_seqs; seq++) {
-		Result final_result = getBestScore(NS2[seq], NS1, weights, my_rank, num_procs);
-		//Result final_result = getBestScore2(NS2[seq], NS1, weights, my_rank, num_procs);
+	// For every SN2
+	for (int seq = 0; seq < number_of_sequences; seq++) {
+		FinalResult final_result = getBestScore(NS2[seq], NS1, weights, my_rank, number_of_processes);
 		if (my_rank != MASTER) {
-			// Replicas send final result - highest result for all mutants checked
+			// Slaves send final result - highest result for all mutants checked
 			MPI_Send(&final_result, 1, MPI_RESULT, MASTER, 0, MPI_COMM_WORLD);
 		}
 
 		if (my_rank == MASTER) {
-			// Master receive from all replicas their highest result
-			for (int i = 1; i < num_procs; i++) {
-				Result result;
+			// Master receive from all slaves their highest result
+			for (int i = 1; i < number_of_processes; i++) {
+				FinalResult result;
 				MPI_Recv(&result, 1, MPI_RESULT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
 				// Update to final result if higher score
-				final_result = compareResults(result, final_result);
+				final_result = compareFinalResults(result, final_result);
 			}
 			// Master gets final result for all calculations to current SN2 to parallel results
 			parallel_results[seq] = final_result;
@@ -64,16 +57,16 @@ int main(int argc, char* argv[]) {
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 	// After getting all SN2 results
-	printf("\nafter\n");
+	printf("\nafter SN2 calculations finished\n");
 	if (my_rank == MASTER) {
-		writeToFile(parallel_results, num_seqs);  // Master prints results to output file
-
+		writeToFile(parallel_results, number_of_sequences);  // Master prints results to output file
+		
 		clock_t end_parallel = clock();
 		double time_parallel = (double)(end_parallel - begin_parallel) / CLOCKS_PER_SEC;
 
-		testAndCompareTime(NS2, NS1, weights, num_seqs, parallel_results);
+		testAndCompareTime(NS2, NS1, weights, number_of_sequences, parallel_results);
 		// Print parallel calculation execution time		
-		printf("Total time for parallel calculation: %.2f minutes\n", time_parallel / 60);
+		printf("Total time for parallel calculation: %.4f minutes\n", time_parallel / 60);
 	}
 
 	free(NS1);
@@ -86,25 +79,25 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-char** readFile(char* NS1, double* weights, int* num_seqs) {
+char** readFile(char* NS1, double* weights, int* number_of_sequences) {
 	FILE* inputFile = fopen("input.txt", "r");
 
 	if (inputFile == NULL) {
-		error_handler("Failed to open file\n");
+		error_handler("Failed to open the file");
 	}
 	fscanf(inputFile, "%lf %lf %lf %lf", &weights[0], &weights[1], &weights[2],
 		&weights[3]);
 	fscanf(inputFile, "%s", NS1);
-	fscanf(inputFile, "%d", num_seqs);
+	fscanf(inputFile, "%d", number_of_sequences);
 
-	char** NS2 = (char**)malloc(sizeof(char*) * *num_seqs);
+	char** NS2 = (char**)malloc(sizeof(char*) * (*number_of_sequences));
 	if (NS2 == NULL) {
 		error_handler("Failed to allocate memory for NS2\n");
 	}
-	for (int i = 0; i < *num_seqs; i++) {
+	for (int i = 0; i < *number_of_sequences; i++) {
 		NS2[i] = (char*)malloc(sizeof(char) * 2000);
 		if (NS2[i] == NULL) {
-			error_handler("Failed to allocate memory for NS2[i]\n");
+			error_handler("Failed to allocate memory for NS2");
 		}
 		fscanf(inputFile, "%s", NS2[i]);
 	}
@@ -113,16 +106,16 @@ char** readFile(char* NS1, double* weights, int* num_seqs) {
 	return NS2;
 }
 
-void writeToFile(Result* results, int num_seqs)
+void writeToFile(FinalResult* results, int number_of_sequences)
 {
 	FILE* outputFile;
 	outputFile = fopen("output.txt", "w");
 
 	if (outputFile == NULL) {
-		error_handler("Failed to open file\n");
+		error_handler("Failed to open the file");
 	}
 
-	for (int seq = 0; seq < num_seqs; seq++) {
+	for (int seq = 0; seq < number_of_sequences; seq++) {
 		fprintf(outputFile, "n = %d\t k = %d \n", results[seq].offset, results[seq].mutant);
 	}
 	fclose(outputFile);
